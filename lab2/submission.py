@@ -1,6 +1,5 @@
 import cv2
 import math
-import pdb
 import numpy as np 
 
 def get_histogram(img):
