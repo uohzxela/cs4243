@@ -31,44 +31,44 @@ def bgr_to_hsv(img):
 	return img
 
 def hsv2rgb(h, s, v):
-    h = float(h)
-    s = float(s)
-    v = float(v)
-    h60 = h / 60.0
-    h60f = math.floor(h60)
-    hi = int(h60f) % 6
-    f = h60 - h60f
-    p = v * (1 - s)
-    q = v * (1 - f * s)
-    t = v * (1 - (1 - f) * s)
-    r, g, b = 0, 0, 0
-    if hi == 0: r, g, b = v, t, p
-    elif hi == 1: r, g, b = q, v, p
-    elif hi == 2: r, g, b = p, v, t
-    elif hi == 3: r, g, b = p, q, v
-    elif hi == 4: r, g, b = t, p, v
-    elif hi == 5: r, g, b = v, p, q
-    r, g, b = int(r * 255), int(g * 255), int(b * 255)
+    h, s, v = float(h), float(s), float(v)
+    c = v * s
+    x = c * (1 - abs(((h / 60) % 2) - 1))
+    m = v - c
+    if 0 <= h < 60:
+    	r, g, b = c, x, 0
+    elif 60 <= h < 120:
+    	r, g, b = x, c, 0
+    elif 120 <= h < 180:
+    	r, g, b = 0, c, x
+    elif 180 <= h < 240:
+    	r, g, b = 0, x, c
+    elif 240 <= h < 300:
+    	r, g, b = x, 0, c
+    else:
+    	r, g, b = c, 0, x
+    r, g, b = (r+m)*255, (g+m)*255, (b+m)*255
     return r, g, b
+
     
 def rgb2hsv(r, g, b):
-    r, g, b = r/255.0, g/255.0, b/255.0
-    mx = max(r, g, b)
-    mn = min(r, g, b)
-    df = mx-mn
-    if mx == mn:
+    r, g, b = r/255., g/255., b/255.
+    cmax = max(r, g, b)
+    cmin = min(r, g, b)
+    diff = cmax - cmin
+    if diff == 0:
         h = 0
-    elif mx == r:
-        h = (60 * ((g-b)/df) + 360) % 360
-    elif mx == g:
-        h = (60 * ((b-r)/df) + 120) % 360
-    elif mx == b:
-        h = (60 * ((r-g)/df) + 240) % 360
-    if mx == 0:
+    elif cmax == r:
+        h = 60 * (((g-b)/diff) % 6)
+    elif cmax == g:
+        h = 60 * (((b-r)/diff) + 2)
+    elif cmax == b:
+        h = 60 * (((r-g)/diff) + 4)
+    if cmax == 0:
         s = 0
     else:
-        s = df/mx
-    v = mx
+        s = diff/cmax
+    v = cmax
     return h, s, v
 
 def histogram_eq(v):
