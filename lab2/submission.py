@@ -4,20 +4,18 @@ import pdb
 import numpy as np 
 
 def get_histogram(img):
-  # calculates normalized histogram of an image
 	m, n = len(img), len(img[0])
-	h = [0.] * 256
+	hist = [0.] * 256
 	for i in xrange(m):
 		for j in xrange(n):
-			h[img[i, j, 0]]+=1
-	return np.array(h)/(m*n)
+			hist[img[i, j, 0]] += 1
+	return np.array(hist)/(m*n)
 
 def histeq(img):
 	hist = get_histogram(img)
 	cum = np.array([sum(hist[:i+1]) for i in xrange(len(hist))])
 	cum = np.uint8(255 * cum)
 	img_eq = np.zeros_like(img)
-	# applying transfered values for each pixels
 	for i in xrange(len(img)):
 		for j in xrange(len(img[0])):
 			img_eq[i, j] = cum[img[i, j]]
