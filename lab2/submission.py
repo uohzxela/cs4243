@@ -1,6 +1,27 @@
 import cv2
 import math
 import pdb
+import numpy as np 
+
+def get_histogram(img):
+  # calculates normalized histogram of an image
+	m, n = len(img), len(img[0])
+	h = [0.] * 256
+	for i in xrange(m):
+		for j in xrange(n):
+			h[img[i, j, 0]]+=1
+	return np.array(h)/(m*n)
+
+def histeq(img):
+	hist = get_histogram(img)
+	cum = np.array([sum(hist[:i+1]) for i in xrange(len(hist))])
+	cum = np.uint8(255 * cum)
+	img_eq = np.zeros_like(img)
+	# applying transfered values for each pixels
+	for i in xrange(len(img)):
+		for j in xrange(len(img[0])):
+			img_eq[i, j] = cum[img[i, j]]
+	return img_eq
 
 def hsv_to_bgr(img):
 	for i in xrange(len(img)):
@@ -50,7 +71,6 @@ def hsv2rgb(h, s, v):
     r, g, b = (r+m)*255, (g+m)*255, (b+m)*255
     return r, g, b
 
-    
 def rgb2hsv(r, g, b):
     r, g, b = r/255., g/255., b/255.
     cmax = max(r, g, b)
@@ -70,9 +90,6 @@ def rgb2hsv(r, g, b):
         s = diff/cmax
     v = cmax
     return h, s, v
-
-def histogram_eq(v):
-	pass
 
 def get_hsv(name):
 	h = cv2.imread(name + "_hue." + FILE_TYPE)
@@ -113,8 +130,8 @@ for name in IMG_NAMES:
 Combine this histogram equalized value channel with the original hue and saturation, 
 then convert the HSV images to RGB and save these RGB images.
 """
-# for name in IMG_NAMES:
-# 	h, s, v = get_hsv(name)
-# 	v = histogram_eq(v)
-# 	img = hsv_to_bgr(combine_hsv(h, s, v))
-# 	cv2.imwrite(name + "_histeq." + FILE_TYPE, img)
+for name in IMG_NAMES:
+	h, s, v = get_hsv(name)
+	v = histeq(v)
+	img = hsv_to_bgr(combine_hsv(h, s, v))
+	cv2.imwrite(name + "_histeq." + FILE_TYPE, img)
