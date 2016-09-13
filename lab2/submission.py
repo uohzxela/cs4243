@@ -1,5 +1,4 @@
 import cv2
-import math
 import numpy as np 
 
 def get_histogram(img):
@@ -10,16 +9,24 @@ def get_histogram(img):
 			hist[img[i, j, 0]] += 1
 	return np.array(hist)/(m*n)
 
+def get_cumulative(hist):
+	cum = []
+	curr = 0.
+	for h in hist:
+		curr += h
+		cum.append(curr * 255)
+	return np.uint8(np.array(cum))
+
+""" perform histogram equalization """
 def histeq(img):
-	hist = get_histogram(img)
-	cum = np.array([sum(hist[:i+1]) for i in xrange(len(hist))])
-	cum = np.uint8(255 * cum)
+	cum = get_cumulative(get_histogram(img))
 	img_eq = np.zeros_like(img)
 	for i in xrange(len(img)):
 		for j in xrange(len(img[0])):
 			img_eq[i, j] = cum[img[i, j]]
 	return img_eq
 
+""" convert image to BGR """
 def hsv_to_bgr(img):
 	for i in xrange(len(img)):
 		for j in xrange(len(img[0])):
@@ -34,6 +41,7 @@ def hsv_to_bgr(img):
 			img[i][j][2] = r
 	return img
 
+""" convert image to HSV """
 def bgr_to_hsv(img):
 	for i in xrange(len(img)):
 		for j in xrange(len(img[0])):
@@ -48,6 +56,7 @@ def bgr_to_hsv(img):
 			img[i][j][2] = v
 	return img
 
+""" convert one pixel to RGB """
 def hsv2rgb(h, s, v):
     h, s, v = float(h), float(s), float(v)
     c = v * s
@@ -68,6 +77,7 @@ def hsv2rgb(h, s, v):
     r, g, b = (r+m)*255, (g+m)*255, (b+m)*255
     return r, g, b
 
+""" convert one pixel to HSV """
 def rgb2hsv(r, g, b):
     r, g, b = r/255., g/255., b/255.
     cmax = max(r, g, b)
@@ -104,7 +114,8 @@ IMG_NAMES = ["concert", "sea1", "sea2"]
 FILE_TYPE = 'jpg'
 
 """
-1) Perform RGB to HSV conversions on the following images and store the output images.
+1) Perform RGB to HSV conversions on the following images
+and store the output images.
 """
 for name in IMG_NAMES:
 	img = cv2.imread(IMG_DIR + name + "." + FILE_TYPE)
@@ -114,8 +125,8 @@ for name in IMG_NAMES:
 	cv2.imwrite(name + "_brightness." + FILE_TYPE, img[:,:,2])
 
 """
-2) Perform HSV to RGB conversions on the HSV images obtained in Step 1 above,
-and store the output images.
+2) Perform HSV to RGB conversions on the HSV images obtained 
+in Step 1 above, and store the output images.
 """
 for name in IMG_NAMES:
 	h, s, v = get_hsv(name)
@@ -123,9 +134,10 @@ for name in IMG_NAMES:
 	cv2.imwrite(name + "_hsv2rgb." + FILE_TYPE, img)
 
 """
-3) Perform histogram equalizations on the value channels of the HSV images obtained in Step 1. 
-Combine this histogram equalized value channel with the original hue and saturation, 
-then convert the HSV images to RGB and save these RGB images.
+3) Perform histogram equalizations on the value channels of the 
+HSV images obtained in Step 1. Combine this histogram equalized 
+value channel with the original hue and saturation, then convert 
+the HSV images to RGB and save these RGB images.
 """
 for name in IMG_NAMES:
 	h, s, v = get_hsv(name)
