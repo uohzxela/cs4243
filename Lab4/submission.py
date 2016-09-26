@@ -5,10 +5,6 @@ import matplotlib.pyplot as plt
 
 np.set_printoptions(threshold=np.inf)
 
-"""
-need to flip?
-within 10%?
-"""
 def filter(img, x, y, kernel):
 	magnitude = 0.
 	for i in xrange(len(kernel)):
@@ -18,23 +14,21 @@ def filter(img, x, y, kernel):
 			magnitude += img[xn][yn] * kernel[i][j]
 	return magnitude
 
-def flip(ff):
-	f_x, f_y = ff
-	# flip horizontally for filter x
-	for i in xrange(len(f_x)):
-		n = len(f_x[i])
+def flip(f):
+	# flip horizontally
+	for i in xrange(len(f)):
+		n = len(f[i])
 		for j in xrange(n/2):
-			f_x[i][j], f_x[i][n-j-1] = f_x[i][n-j-1], f_x[i][j]
-
-	# flip vertically for filter y
-	for i in xrange(len(f_y[0])):
-		n = len(f_y)
+			f[i][j], f[i][n-j-1] = f[i][n-j-1], f[i][j]
+	# flip vertically
+	for i in xrange(len(f)):
+		n = len(f)
 		for j in xrange(n/2):
-			f_y[j][i], f_y[n-j-1][i] = f_y[n-j-1][i], f_y[j][i]
-
-	return ff
+			f[j][i], f[n-j-1][i] = f[n-j-1][i], f[j][i]
+	return f
 
 def convolve(img, kernel):
+	kernel = flip(kernel)
 	result = np.zeros(img.shape)
 	for i in xrange(1, len(result)-1):
 		for j in xrange(1, len(result[0])-1):
@@ -53,24 +47,27 @@ def get_gauss_kernel(size,sigma=1.0):
 		kernel = kernel/kernel_sum 
 	return kernel
 
-def compute_response_matrix(W_xx, W_xy, W_yy):
-	response_matrix = np.zeros((W_xx.shape[0]/10, W_xx.shape[1]/10))
-	for i in xrange(10, len(W_xx), 10):
-		for j in xrange(10, len(W_xx[0]), 10):
+def compute_responses(W_xx, W_xy, W_yy):
+	responses = []
+	max_response = float('-inf')
+	STEP = 10
+	for i in xrange(STEP, len(W_xx), STEP):
+		for j in xrange(STEP, len(W_xx[0]), STEP):
 			W = np.array([[W_xx[i][j], W_xy[i][j]], [W_xy[i][j], W_yy[i][j]]])
 			detW = np.linalg.det(W)
 			traceW = np.trace(W)
-			response_matrix[(i/10)-1][(j/10)-1] = detW - (0.06 * traceW * traceW)
-	return response_matrix
+			response = detW - (0.06 * traceW * traceW)
+			max_response = max(response, max_response)
+			responses.append((response, i, j))
+	return responses, max_response
 
-def find_corners(response_matrix):
-	max_response = response_matrix.max()
+def find_corners(responses, max_response):
+	# max_response = response_matrix.max()
 	corners = []
-	for i in xrange(len(response_matrix)):
-		for j in xrange(len(response_matrix[0])):
-			response = response_matrix[i][j]
-			if response >= 0.9 * max_response:
-				corners.append(((i+1)*10, (j+1)*10))
+	for i in xrange(len(responses)):
+		response, x, y = responses[i]
+		if response >= 0.9 * max_response:
+			corners.append((x, y))
 	return corners
 
 SOBEL_X = [[-1,0,1], 
@@ -81,10 +78,11 @@ SOBEL_Y = [[1,2,1],
 		   [0,0,0],
 	       [-1,-2,-1]]
 
-IMG_NAMES = ['flower.jpg', 'checker.jpg']
+IMG_NAMES = ['checker.jpg', 'flower.jpg', 'test1.jpg', 'test2.jpg', 'test3.jpg']
 
 for name in IMG_NAMES:
 	img = cv2.imread(name, 0)
+	orig = cv2.imread(name)
 	gx = convolve(img, SOBEL_X)
 	gy = convolve(img, SOBEL_Y)
 
@@ -93,17 +91,18 @@ for name in IMG_NAMES:
 	I_yy = gy * gy
 
 	gauss_kernel = get_gauss_kernel(size=3)
-	print gauss_kernel
 	W_xx = convolve(I_xx, gauss_kernel)
 	W_xy = convolve(I_xy, gauss_kernel)
 	W_yy = convolve(I_yy, gauss_kernel)
 
-	response_matrix = compute_response_matrix(W_xx, W_xy, W_yy)
-	corners = find_corners(response_matrix)
-	rows, cols = zip(*corners)
-	# print corners
-	plt.figure()
-	plt.imshow(img, cmap='gray')
-	plt.hold(True)
-	plt.scatter(rows,cols,color='blue')
-	plt.show()
+	responses, max_response = compute_responses(W_xx, W_xy, W_yy)
+	corners = find_corners(responses, max_response)
+	for x, y in corners:
+		cv2.circle(orig, (x, y), 9, (0,255,0), 2)
+	cv2.imwrite(name.split(".")[0] + "_corners.jpg", orig)
+	# rows, cols = zip(*corners)
+	# plt.figure()
+	# plt.imshow(img, cmap='gray')
+	# plt.hold(True)
+	# plt.scatter(rows,cols,color='blue')
+	# plt.show()
