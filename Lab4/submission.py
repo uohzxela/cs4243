@@ -1,7 +1,5 @@
-import math
 import cv2
 import numpy as np
-import matplotlib.pyplot as plt
 
 def get_magnitude(img, x, y, kernel):
 	magnitude = 0.
@@ -13,12 +11,12 @@ def get_magnitude(img, x, y, kernel):
 	return magnitude
 
 def flip(f):
-	# flip left and right
+	# flip left right
 	for i in xrange(len(f)):
 		n = len(f[i])
 		for j in xrange(n/2):
 			f[i][j], f[i][n-j-1] = f[i][n-j-1], f[i][j]
-	# flip up and down
+	# flip up down
 	for i in xrange(len(f)):
 		n = len(f)
 		for j in xrange(n/2):
@@ -45,29 +43,32 @@ def get_gauss_kernel(size,sigma=1.0):
 		kernel = kernel/kernel_sum 
 	return kernel
 
-#response window
-WINDOW = 10
-
-def compute_response_matrix(W_xx, W_xy, W_yy):
-	response_matrix = np.zeros((W_xx.shape[0]/WINDOW, W_xx.shape[1]/WINDOW))
-	for i in xrange(WINDOW, len(W_xx), WINDOW):
-		for j in xrange(WINDOW, len(W_xx[0]), WINDOW):
+def compute_response_matrix(W_xx, W_xy, W_yy, step_size):
+	response_matrix = np.zeros((W_xx.shape[0]/step_size, W_xx.shape[1]/step_size))
+	for i in xrange(step_size, len(W_xx), step_size):
+		for j in xrange(step_size, len(W_xx[0]), step_size):
 			W = np.array([[W_xx[i][j], W_xy[i][j]], [W_xy[i][j], W_yy[i][j]]])
 			detW = np.linalg.det(W)
 			traceW = np.trace(W)
 			response = detW - (0.06 * traceW * traceW)
-			response_matrix[(i/WINDOW)-1][(j/WINDOW)-1] = response
+			response_matrix[(i/step_size)-1][(j/step_size)-1] = response
 	return response_matrix
 
-def find_corners(response_matrix):
+def compute_corners(W_xx, W_xy, W_yy, step_size=10, threshold=0.1):
+	response_matrix = compute_response_matrix(W_xx, W_xy, W_yy, step_size)
 	max_response = response_matrix.max()
 	corners = []
 	for i in xrange(len(response_matrix)):
 		for j in xrange(len(response_matrix[0])):
 			response = response_matrix[i][j]
-			if response >= 0.9 * max_response:
-				corners.append(((i+1)*WINDOW, (j+1)*WINDOW))
+			if response >= threshold * max_response:
+				corners.append(((i+1)*step_size, (j+1)*step_size))
 	return corners
+
+def draw_corners_and_save_image(orig, name, corners):
+	for x, y in corners:
+		cv2.rectangle(orig, (y, x), (y+9, x+9), (0,255,0), 2)
+	cv2.imwrite(name, orig)
 
 SOBEL_X = [[-1,0,1], 
 		   [-2,0,2],
@@ -84,6 +85,7 @@ IMG_NAMES = ['checker.jpg', 'flower.jpg', 'test1.jpg', 'test2.jpg', 'test3.jpg']
 for name in IMG_NAMES:
 	img = cv2.imread(name, 0)
 	orig = cv2.imread(name)
+	orig2 = orig.copy()
 
 	gx = convolve(img, SOBEL_X)
 	gy = convolve(img, SOBEL_Y)
@@ -96,15 +98,13 @@ for name in IMG_NAMES:
 	W_xy = convolve(I_xy, GAUSSIAN)
 	W_yy = convolve(I_yy, GAUSSIAN)
 
-	response_matrix = compute_response_matrix(W_xx, W_xy, W_yy)
-	corners = find_corners(response_matrix)
-	for x, y in corners:
-		cv2.circle(orig, (x, y), 9, (0,255,0), 2)
-	cv2.imwrite(name.split(".")[0] + "_corners2.jpg", orig)
+	
+	corners = compute_corners(W_xx, W_xy, W_yy, step_size=10, threshold=0.1)
+	more_corners = compute_corners(W_xx, W_xy, W_yy, step_size=1, threshold=0.1)
 
-	# rows, cols = zip(*corners)
-	# plt.figure()
-	# plt.imshow(img, cmap='gray')
-	# plt.hold(True)
-	# plt.scatter(rows,cols,color='blue')
-	# plt.show()
+	draw_corners_and_save_image(orig2, 
+								name.split(".")[0] + "_corners.jpg",
+								corners)
+	draw_corners_and_save_image(orig, 
+								name.split(".")[0] + "_more_corners.jpg",
+								more_corners)
