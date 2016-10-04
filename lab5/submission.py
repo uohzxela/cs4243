@@ -22,22 +22,19 @@ print "FPS:", fps
 _, img = cap.read()
 avg_img = np.float32(img)
 
-ALPHA = 0.01
-SPACEBAR_KEYCODE = 32
-
 for fr in range(1, frame_count):
 	_, frame = cap.read()
-	cv2.accumulateWeighted(frame, avg_img, ALPHA)
+	alpha = 1./float(fr+1)
+	cv2.accumulateWeighted(frame, avg_img, alpha)
 	norm_img = np.uint8(cv2.convertScaleAbs(avg_img))
 	cv2.imshow('normImg', norm_img)
 
 	if fr == frame_count-1:
-		cv2.imwrite("background2.jpg", norm_img)
+		cv2.imwrite("background.jpg", norm_img)
 
-	if cv2.waitKey(1) == SPACEBAR_KEYCODE:
-		break
+	cv2.waitKey(1)
 
-	print "fr = ", fr, " alpha = ", ALPHA
+	print "fr = ", fr, " alpha = ", alpha
 
 cv2.waitKey(0)
 cv2.destroyAllWindows()
